@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+  <title>kaboom</title>
+  <meta charset="utf-8">
+  <style>
+    * {
+      margin: 0;
+    }
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+<script src="https://kaboomjs.com/lib/0.5.0/kaboom.js"></script>
+<script src="https://kaboomjs.com/lib/0.5.0/plugins/aseprite.js"></script>
+<script src="https://kaboomjs.com/lib/0.5.0/plugins/pedit.js"></script>
+<script src="https://kaboomjs.com/pub/legacy/kbmsprite.js"></script>
+
+  <script>
+
+kaboom({
+  ...{"fullscreen":true,"width":240,"height":240,"scale":2,"startScene":"main","version":"0.5.0","clearColor":[0.07450980392156863,0.06274509803921569,0.07450980392156863,1]},
+  global: true,
+  plugins: [ peditPlugin, asepritePlugin, kbmspritePlugin ],
+});
+loadKbmsprite("block", "sprites/block.kbmsprite");
+loadKbmsprite("enemy", "sprites/enemy.kbmsprite");
+loadKbmsprite("goal", "sprites/goal.kbmsprite");
+loadKbmsprite("ground", "sprites/ground.kbmsprite");
+loadKbmsprite("item_block", "sprites/item_block.kbmsprite");
+loadKbmsprite("non_block", "sprites/non_block.kbmsprite");
+loadKbmsprite("player", "sprites/player.kbmsprite");
+scene("goal", (args = {}) => {
+add([
+  text("CLEAR"),
+  pos(width()/2, height()/2),
+  origin('center'),  // what is this?
+  scale(2)
+])
+});
+scene("lose", (args = {}) => {
+add([
+  text("GAME OVER"),
+  pos(width()/2, height()/2),
+  origin('center'),  // what is this?
+  scale(2)
+])
+});
+scene("main", (args = {}) => {
+const ENEMY_SPEED = 30
+const MOVE_SPEED = 200
+const JUMP_FORCE = 400
+var isJumping;
+
+const player = add([
+  sprite('player'),
+  scale(1.5),
+  pos(20,20),
+  body()
+  ])
+
+
+keyDown('right', () => { 
+  player.move(MOVE_SPEED, 0);
+});
+
+keyDown('left', () => {
+  player.move(-MOVE_SPEED, 0);
+});
+
+keyPress("space", () => {
+  isJumping = true;
+  player.jump(JUMP_FORCE);
+});
+
+const gameLevel = addLevel([
+  '              ',
+  '      @       ',
+  '     ##   ?   ',
+  '            * ',
+  'xxx      xxxxx',
+], {
+  width: 20,
+  height: 40,
+  'x' : [sprite("ground"),solid(), 'ground'],
+  '#' : [sprite("block"), solid(), scale(1.2), 'block'],
+  '@' : [sprite("enemy"), solid(), body(), 'dangerous'],
+  '?' : [sprite("item_block"), solid(), scale(1.2), 'coin-appear'],
+  '*' : [sprite("goal"), solid(),scale(1.2), 'goal'],
+  '&' : [sprite("non_block"), solid(), scale(1.2)]
+})
+
+
+
+action('dangerous', (d) => {
+  d.move(-ENEMY_SPEED, 0)
+})
+
+
+
+player.collides('ground', () => {
+  isJumping = false;
+})
+
+player.collides('dangerous', (d) => {
+  if (isJumping){
+    destroy(d)
+  } else {
+    go('lose')
+  }
+})
+
+player.collides('goal', () => {
+  go('goal')
+})
+
+player.action(() => {
+  if (player.pos.y >= 500) {
+    go('lose')
+  }
+})
+
+player.on('headbump', (obj) => {
+  if(obj.is('coin-appear')) {
+    destroy(obj)
+    gameLevel.spawn('&', obj.gridPos.sub(0,0))
+  }
+})
+});
+start("main");
+
+  </script>
+</body>
+
+</html>
